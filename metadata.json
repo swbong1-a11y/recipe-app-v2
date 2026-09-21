@@ -1,0 +1,6 @@
+{
+  "name": "자투리 미식회",
+  "description": "냉장고 속 자투리 재료로 완성하는 근사한 15분 일상 미식 레시피와 맛 상승 치트키",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
