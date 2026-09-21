@@ -21,12 +21,6 @@ import {
   Lightbulb,
   Heart,
   Award,
-  Camera,
-  Maximize2,
-  RefreshCw,
-  Eye,
-  X,
-  Image as ImageIcon,
 } from 'lucide-react';
 
 interface RecipeCardProps {
@@ -38,11 +32,6 @@ interface RecipeCardProps {
   onToggleLike?: (recipe: ParsedRecipe) => void;
   onOpenTimer?: () => void;
   onOpenRanking?: () => void;
-  onUpdateRecipeImage?: (
-    recipeId: string,
-    imageUrl: string,
-    source: 'ai_generated' | 'fallback_preset'
-  ) => void;
 }
 
 export const RecipeCard: React.FC<RecipeCardProps> = ({
@@ -54,61 +43,11 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
   onToggleLike,
   onOpenTimer,
   onOpenRanking,
-  onUpdateRecipeImage,
 }) => {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [copied, setCopied] = useState(false);
   const [selectedServing, setSelectedServing] = useState<'one' | 'two' | 'four'>('one');
   const [showAllServings, setShowAllServings] = useState<boolean>(false);
-
-  // AI Dish Image State
-  const [currentImageUrl, setCurrentImageUrl] = useState<string | undefined>(recipe.imageUrl);
-  const [currentImageSource, setCurrentImageSource] = useState<
-    'ai_generated' | 'fallback_preset' | undefined
-  >(recipe.imageSource);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-
-  // Sync with recipe.imageUrl prop
-  React.useEffect(() => {
-    if (recipe.imageUrl) {
-      setCurrentImageUrl(recipe.imageUrl);
-      setCurrentImageSource(recipe.imageSource);
-    }
-  }, [recipe.imageUrl, recipe.imageSource]);
-
-  // Generate or re-generate dish photo
-  const handleGenerateImage = async () => {
-    if (isGeneratingImage) return;
-    setIsGeneratingImage(true);
-
-    try {
-      const res = await fetch('/api/recipe/image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dishName: recipe.dishName,
-          ingredients: recipe.usedIngredients || recipe.ingredients || [],
-          styleTag: recipe.styleTag,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error('요리 사진을 생성하지 못했습니다.');
-      }
-
-      const data = await res.json();
-      if (data.imageUrl) {
-        setCurrentImageUrl(data.imageUrl);
-        setCurrentImageSource(data.source);
-        onUpdateRecipeImage?.(recipe.id, data.imageUrl, data.source);
-      }
-    } catch (err: unknown) {
-      console.warn('Dish image generation failed:', err);
-    } finally {
-      setIsGeneratingImage(false);
-    }
-  };
 
   const servings =
     recipe.servings ||
@@ -300,128 +239,6 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
             ))}
           </div>
         ) : null}
-      </div>
-
-      {/* 📸 AI 완성 요리 비주얼 (Dish Visual Hero) */}
-      <div
-        id={`recipe-dish-image-section-${recipe.id}`}
-        className="relative w-full border-b border-stone-200/80 bg-stone-950 overflow-hidden"
-      >
-        {isGeneratingImage ? (
-          <div className="relative aspect-[16/9] sm:aspect-[21/9] md:aspect-[16/9] max-h-72 w-full flex flex-col items-center justify-center p-6 text-center text-white bg-gradient-to-br from-stone-900 via-stone-800 to-amber-950">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse pointer-events-none" />
-            <div className="relative z-10 flex flex-col items-center gap-2.5">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-amber-400 animate-bounce">
-                <Camera className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-bold text-amber-200">
-                  AI가 완성된 요리 사진을 조리 중입니다...
-                </p>
-                <p className="text-xs text-stone-400">
-                  '{recipe.dishName}'의 갓 만든 플레이팅 비주얼을 생성하고 있어요
-                </p>
-              </div>
-              <div className="flex items-center gap-2 mt-1 px-3 py-1 rounded-full bg-black/40 border border-white/10 text-xs text-amber-300">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                <span>따끈따끈 플레이팅 촬영 중</span>
-              </div>
-            </div>
-          </div>
-        ) : currentImageUrl ? (
-          <div className="relative aspect-[16/9] sm:aspect-[21/9] md:aspect-[16/9] max-h-72 w-full group overflow-hidden bg-stone-950">
-            <img
-              src={currentImageUrl}
-              alt={`완성된 ${recipe.dishName} 요리 사진`}
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105 cursor-pointer"
-              onClick={() => setIsImageModalOpen(true)}
-            />
-            {/* Gradient vignette */}
-            <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-stone-950/40 pointer-events-none" />
-
-            {/* Badge on top left */}
-            <div className="absolute top-3 left-3 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-stone-900/85 backdrop-blur-md text-amber-300 border border-amber-500/30 shadow-md">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>AI 완성 요리 비주얼</span>
-              </span>
-              {currentImageSource === 'ai_generated' ? (
-                <span className="hidden sm:inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-950/85 text-emerald-300 border border-emerald-500/30 backdrop-blur-xs">
-                  Gemini 생생 포토
-                </span>
-              ) : (
-                <span className="hidden sm:inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-950/85 text-amber-300 border border-amber-500/30 backdrop-blur-xs">
-                  미식 플레이팅
-                </span>
-              )}
-            </div>
-
-            {/* Controls on top right */}
-            <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition-opacity">
-              <button
-                type="button"
-                onClick={() => setIsImageModalOpen(true)}
-                className="p-1.5 rounded-lg bg-stone-900/80 hover:bg-stone-900 text-stone-200 hover:text-white border border-white/20 backdrop-blur-md shadow-md transition-all active:scale-95 cursor-pointer"
-                title="사진 크게 보기"
-              >
-                <Maximize2 className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleGenerateImage}
-                disabled={isGeneratingImage}
-                className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-stone-900/80 hover:bg-stone-900 text-amber-300 hover:text-amber-200 border border-amber-500/30 backdrop-blur-md shadow-md transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                title="AI 요리 사진 다시 생성하기"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingImage ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">다시 생성</span>
-              </button>
-            </div>
-
-            {/* Bottom text overlay */}
-            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-xs">
-              <p className="text-stone-300 drop-shadow-sm truncate max-w-[80%]">
-                🍽️ <span className="font-semibold text-white">{recipe.dishName}</span> 완성 상차림
-              </p>
-              <button
-                type="button"
-                onClick={() => setIsImageModalOpen(true)}
-                className="text-amber-300 hover:text-amber-200 font-medium flex items-center gap-1 drop-shadow-sm cursor-pointer"
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>확대</span>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="relative p-6 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border-t border-amber-200/40 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-sm shrink-0">
-                <Camera className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">
-                  <span>AI 완성 요리 사진 보기</span>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                    NEW
-                  </span>
-                </h4>
-                <p className="text-xs text-stone-500">
-                  AI가 갓 조리된 '{recipe.dishName}'의 먹음직스러운 완성 비주얼을 생성합니다.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleGenerateImage}
-              className="shrink-0 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all active:scale-95 cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>완성 사진 생성하기</span>
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="p-5 md:p-6 space-y-6">
@@ -830,62 +647,6 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
           <span>기본 양념(소금, 간장, 식용유 등)은 구비되어 있다고 가정합니다.</span>
         </div>
       </div>
-
-      {/* 🖼️ Full Photo Enlargement Modal */}
-      {isImageModalOpen && currentImageUrl && (
-        <div
-          id={`recipe-image-modal-backdrop-${recipe.id}`}
-          className="fixed inset-0 z-50 bg-stone-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200"
-          onClick={() => setIsImageModalOpen(false)}
-        >
-          <div
-            id={`recipe-image-modal-container-${recipe.id}`}
-            className="relative max-w-3xl w-full bg-stone-900 rounded-3xl overflow-hidden shadow-2xl border border-stone-700/80 animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative aspect-[4/3] w-full max-h-[70vh] bg-black flex items-center justify-center overflow-hidden">
-              <img
-                src={currentImageUrl}
-                alt={recipe.dishName}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain"
-              />
-              <button
-                type="button"
-                onClick={() => setIsImageModalOpen(false)}
-                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-black text-white transition-colors cursor-pointer"
-                title="닫기"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4 sm:p-5 bg-stone-900 flex flex-wrap items-center justify-between gap-3 text-white border-t border-stone-800">
-              <div>
-                <h3 className="text-lg font-bold text-amber-200 flex items-center gap-2">
-                  <span>{recipe.dishName}</span>
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    AI 완성 요리 비주얼
-                  </span>
-                </h3>
-                <p className="text-xs text-stone-400 mt-0.5">
-                  {recipe.usedIngredients?.join(', ') || recipe.ingredients?.join(', ')}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleGenerateImage}
-                  disabled={isGeneratingImage}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingImage ? 'animate-spin' : ''}`} />
-                  <span>새로운 구도로 다시 생성</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

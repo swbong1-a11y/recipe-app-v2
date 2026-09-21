@@ -35,8 +35,6 @@ export interface ParsedRecipe {
     name: string;
     reason: string;
   };
-  imageUrl?: string;
-  imageSource?: 'ai_generated' | 'fallback_preset';
   rawText: string;
   ingredients: string[];
   createdAt: number;
