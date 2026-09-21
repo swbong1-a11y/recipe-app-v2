@@ -36,7 +36,6 @@ export default function App() {
   const [preference, setPreference] = useState('');
   const [cookingTool, setCookingTool] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [streamText, setStreamText] = useState('');
   const [currentRecipes, setCurrentRecipes] = useState<ParsedRecipe[]>([]);
   const [activeRecipeIndex, setActiveRecipeIndex] = useState<number>(0);
   const [viewMode, setViewMode] = useState<'tabs' | 'all'>('tabs');
@@ -134,7 +133,6 @@ export default function App() {
 
     setIsLoading(true);
     setErrorMessage(null);
-    setStreamText('');
 
     // Accumulate dishes to avoid repetition
     const excludeList = isReroll
@@ -195,7 +193,6 @@ export default function App() {
                 }
                 if (streamPayload.text) {
                   accumulated += streamPayload.text;
-                  setStreamText(accumulated);
                 }
                 if (streamPayload.done) {
                   const parsedList = parseMultipleRecipesMarkdown(accumulated, selectedIngredients);
@@ -250,7 +247,6 @@ export default function App() {
           const parsedList = parseMultipleRecipesMarkdown(data.recipeText, selectedIngredients);
           setCurrentRecipes(parsedList);
           setActiveRecipeIndex(0);
-          setStreamText(data.recipeText);
           setPreviousDishNames((prev) => [
             ...prev,
             ...parsedList.map((r) => r.dishName),
@@ -492,12 +488,12 @@ export default function App() {
                 선택한 재료 중 최적의 궁합을 골라 서로 다른 매력의 2가지 15분 요리와 필수 시판 치트키를 설계하고 있습니다.
               </p>
 
-              {/* Streaming live preview text if any chunk has arrived */}
-              {streamText && (
-                <div className="text-left mt-6 p-4 rounded-xl bg-stone-50 border border-stone-200 text-xs font-mono text-stone-700 whitespace-pre-wrap max-h-60 overflow-y-auto">
-                  {streamText}
-                </div>
-              )}
+              {/* Gentle loading indicator */}
+              <div className="flex items-center justify-center gap-1.5 pt-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse delay-75" />
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce delay-150" />
+              </div>
             </div>
           )}
 
