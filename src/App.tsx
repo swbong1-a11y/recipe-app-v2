@@ -120,7 +120,7 @@ export default function App() {
 
     let publicFoundRecipes: ParsedRecipe[] = [];
 
-    // ⭐️ 1단계: '식약처 레시피' & '한식진흥원 레시피' 2대 공공 API 동시 병렬 검색 (선택 재료 최소 70% 이상 유사도) ⭐️
+    // ⭐️ 1단계: '식약처 레시피' & '한식진흥원 레시피' 2대 공공 API 동시 병렬 검색 (선택 재료 최소 50% 이상 유사도) ⭐️
     try {
       const publicRes = await fetch('/api/recipe/public-search', {
         method: 'POST',
@@ -130,7 +130,7 @@ export default function App() {
           preference,
           cookingTool,
           excludeDishes: excludeList,
-          minMatchRate: 70,
+          minMatchRate: 50,
         }),
       });
 
@@ -144,7 +144,7 @@ export default function App() {
       console.warn('공공데이터 레시피 동시 조회 실패(AI 대체 진행):', publicErr);
     }
 
-    // ⭐️ [경우 1]: 공공 데이터에서 70% 이상 일치 레시피가 2개 이상 발견된 경우 -> 모두 1순위로 즉시 화면에 띄움! ⭐️
+    // ⭐️ [경우 1]: 공공 데이터에서 50% 이상 일치 레시피가 2개 이상 발견된 경우 -> 모두 1순위로 즉시 화면에 띄움! ⭐️
     if (publicFoundRecipes.length >= 2) {
       setCurrentRecipes(publicFoundRecipes);
       setActiveRecipeIndex(0);
@@ -161,7 +161,7 @@ export default function App() {
       return;
     }
 
-    // ⭐️ [경우 2]: 공공 데이터에서 70% 이상 일치 레시피가 1개만 발견된 경우 (부족한 경우) -> 1순위 공공 1개 + Gemini AI 15분 냉파 요리 1개 보충 ⭐️
+    // ⭐️ [경우 2]: 공공 데이터에서 50% 이상 일치 레시피가 1개만 발견된 경우 (부족한 경우) -> 1순위 공공 1개 + Gemini AI 15분 냉파 요리 1개 보충 ⭐️
     if (publicFoundRecipes.length === 1) {
       setCurrentRecipes(publicFoundRecipes);
       setActiveRecipeIndex(0);
@@ -582,12 +582,12 @@ export default function App() {
               </div>
               <h3 className="text-lg font-bold text-stone-800">
                 {searchStage === 'searching_public'
-                  ? '🏛️ 식약처 & 🇰🇷 한식진흥원 공공 DB 동시 탐색 중... (일치율 70% 이상)'
+                  ? '🏛️ 식약처 & 🇰🇷 한식진흥원 공공 DB 동시 탐색 중... (일치율 50% 이상)'
                   : '🤖 Gemini AI가 15분 초간단 냉파 레시피를 설계하는 중...'}
               </h3>
               <p className="text-xs text-stone-500 max-w-md mx-auto leading-relaxed">
                 {searchStage === 'searching_public'
-                  ? '선택하신 식재료와 최소 70% 이상 일치하는 식품의약품안전처 및 한식진흥원 아카이브 표준 레시피를 1순위로 동시 검색하고 있습니다.'
+                  ? '선택하신 식재료와 최소 50% 이상 일치하는 식품의약품안전처 및 한식진흥원 아카이브 표준 레시피를 1순위로 동시 검색하고 있습니다.'
                   : '냉장고 자투리 재료를 가장 맛있게 살리는 15분 스피드 조리법과 맛 상승 치트키를 조합 중입니다.'}
               </p>
 
@@ -622,7 +622,7 @@ export default function App() {
                           🏛️ 식약처 공식 인증 & 🇰🇷 한식진흥원 전통 레시피 1순위 동시 매칭:
                         </span>
                         <span>
-                          선택하신 재료와 70% 이상 일치하는 두 공공 기관의 공식 레시피를 모두 1순위로 우선 화면에 배치했습니다.
+                          선택하신 재료와 50% 이상 일치하는 두 공공 기관의 공식 레시피를 모두 1순위로 우선 화면에 배치했습니다.
                         </span>
                       </div>
                     </div>
@@ -640,10 +640,10 @@ export default function App() {
                       </div>
                       <div className="flex-1 min-w-0 text-stone-700 leading-relaxed">
                         <span className="font-bold text-blue-900 block sm:inline mr-1">
-                          🏛️ 식약처 공공 DB 1순위 매칭 (70% 이상 유사도 충족):
+                          🏛️ 식약처 공공 DB 1순위 매칭 (50% 이상 유사도 충족):
                         </span>
                         <span>
-                          선택하신 식재료와 최소 70% 이상 일치하는 식품의약품안전처 공식 표준 레시피를 1순위로 우선 배치했습니다.
+                          선택하신 식재료와 최소 50% 이상 일치하는 식품의약품안전처 공식 표준 레시피를 1순위로 우선 배치했습니다.
                         </span>
                       </div>
                     </div>
@@ -661,10 +661,10 @@ export default function App() {
                       </div>
                       <div className="flex-1 min-w-0 text-stone-700 leading-relaxed">
                         <span className="font-bold text-emerald-900 block sm:inline mr-1">
-                          🇰🇷 한식진흥원 전통 아카이브 1순위 매칭 (70% 이상 유사도 충족):
+                          🇰🇷 한식진흥원 전통 아카이브 1순위 매칭 (50% 이상 유사도 충족):
                         </span>
                         <span>
-                          선택하신 식재료와 최소 70% 이상 일치하는 한식진흥원 공식 전통 레시피를 1순위로 우선 배치했습니다.
+                          선택하신 식재료와 최소 50% 이상 일치하는 한식진흥원 공식 전통 레시피를 1순위로 우선 배치했습니다.
                         </span>
                       </div>
                     </div>
@@ -681,10 +681,10 @@ export default function App() {
                     </div>
                     <div className="flex-1 min-w-0 text-stone-700 leading-relaxed">
                       <span className="font-bold text-amber-900 block sm:inline mr-1">
-                        🤖 하이브리드 AI 즉석 냉파 모드 (2대 공공 DB 70% 미충족 Fallback):
+                        🤖 하이브리드 AI 즉석 냉파 모드 (2대 공공 DB 50% 미충족 Fallback):
                       </span>
                       <span>
-                        식약처 및 한식진흥원 공공 데이터 모두 선택 재료와 70% 이상 일치하는 결과가 없어, Gemini AI가 선택 재료를 100% 살리는 맞춤형 15분 냉파 요리를 생성했습니다.
+                        식약처 및 한식진흥원 공공 데이터 모두 선택 재료와 50% 이상 일치하는 결과가 없어, Gemini AI가 선택 재료를 100% 살리는 맞춤형 15분 냉파 요리를 생성했습니다.
                       </span>
                     </div>
                   </div>

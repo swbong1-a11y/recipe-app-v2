@@ -236,7 +236,7 @@ export async function searchMfdsRecipes(params: {
     preference = '',
     cookingTool = '',
     excludeDishes = [],
-    minMatchRate = 70,
+    minMatchRate = 50,
     limit = 2,
   } = params;
 
@@ -297,7 +297,7 @@ export async function searchMfdsRecipes(params: {
   }
 
   const totalCount = ingredients.length;
-  // Minimum number of matched ingredients required to achieve minMatchRate% (e.g. 70%)
+  // Minimum number of matched ingredients required to achieve minMatchRate% (e.g. 50%)
   const minRequiredCount = Math.ceil(totalCount * (minMatchRate / 100));
 
   // Score each candidate against user ingredients and preferences
@@ -329,7 +329,7 @@ export async function searchMfdsRecipes(params: {
       }
     }
 
-    // ⭐️ 최소 70% 유사도 필터링 (사용자 선택 재료 기준) ⭐️
+    // ⭐️ 최소 50% 유사도 필터링 (사용자 선택 재료 기준) ⭐️
     const matchRate = totalCount > 0 ? Math.round((matched.length / totalCount) * 100) : 0;
     if (matched.length < minRequiredCount || matchRate < minMatchRate) {
       continue;

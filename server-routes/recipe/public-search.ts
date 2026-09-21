@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  const { ingredients, preference, cookingTool, excludeDishes, minMatchRate = 70 } = body || {};
+  const { ingredients, preference, cookingTool, excludeDishes, minMatchRate = 50 } = body || {};
 
   if (!ingredients || (Array.isArray(ingredients) && ingredients.length === 0)) {
     res.status(400).json({ error: '식재료를 1개 이상 입력해주세요.' });
@@ -38,7 +38,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     ? ingredients
     : String(ingredients).split(',').map((s) => s.trim()).filter(Boolean);
 
-  const parsedMinRate = typeof minMatchRate === 'number' ? minMatchRate : 70;
+  const parsedMinRate = typeof minMatchRate === 'number' ? minMatchRate : 50;
 
   try {
     // ⭐️ 1단계: '식약처 레시피'와 '한식진흥원 레시피' 두 공공 API 동시 병렬 검색 ⭐️
@@ -69,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const combinedCandidates: ParsedRecipe[] = [];
 
-    // 두 출처에서 일치율 70% 이상인 결과들을 취합
+    // 두 출처에서 일치율 50% 이상인 결과들을 취합
     const validMfds = (mfdsResults || []).filter((r) => (r.matchRate || 0) >= parsedMinRate);
     const validKfpi = (kfpiResults || []).filter((r) => (r.matchRate || 0) >= parsedMinRate);
 

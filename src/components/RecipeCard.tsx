@@ -345,7 +345,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
               </div>
             </div>
 
-            {/* 🎯 70% 이상 재료 일치 검증 표시 바 */}
+            {/* 🎯 50% 이상 재료 일치 검증 표시 바 */}
             <div className={`p-3 rounded-xl bg-white border flex flex-wrap items-center justify-between gap-2 shadow-2xs ${
               recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
                 ? 'border-emerald-200'
@@ -370,7 +370,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
                   </strong> 중 <strong className="text-emerald-700">{recipe.publicMeta.matchedIngredients?.length || recipe.usedIngredients?.length || 1}개</strong> 포함
                 </span>
                 <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                  ✓ 최소 70% 이상 유사 기준 충족
+                  ✓ 최소 50% 이상 유사 기준 충족
                 </span>
               </div>
               {recipe.publicMeta.missingIngredients && recipe.publicMeta.missingIngredients.length > 0 && (

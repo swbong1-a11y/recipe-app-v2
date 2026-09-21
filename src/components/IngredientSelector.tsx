@@ -469,7 +469,7 @@ export const IngredientSelector: React.FC<IngredientSelectorProps> = ({
         {selectedIngredients.length > 0 && (
           <div className="text-center space-y-1 mt-2.5">
             <p className="text-xs text-stone-700 font-medium">
-              선택한 재료와 <strong className="text-blue-700 font-bold">최소 70% 이상 유사한 식약처 & 한식진흥원 공공 레시피</strong>를 1순위로 동시 탐색합니다.
+              선택한 재료와 <strong className="text-blue-700 font-bold">최소 50% 이상 유사한 식약처 & 한식진흥원 공공 레시피</strong>를 1순위로 동시 탐색합니다.
             </p>
             <p className="text-[11px] text-stone-500">
               두 공공 데이터 모두 일치하는 결과가 없거나 부족할 때만, Gemini AI가 15분 냉파 요리를 맞춤 생성합니다.

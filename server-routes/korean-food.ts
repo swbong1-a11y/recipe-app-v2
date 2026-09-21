@@ -513,7 +513,7 @@ export async function searchKoreanFoodRecipes(params: {
     preference = '',
     cookingTool = '',
     excludeDishes = [],
-    minMatchRate = 70,
+    minMatchRate = 50,
     limit = 2,
   } = params;
 
@@ -568,7 +568,7 @@ export async function searchKoreanFoodRecipes(params: {
       }
     }
 
-    // ⭐️ 최소 70% 유사도 필터링 (사용자 선택 재료 기준) ⭐️
+    // ⭐️ 최소 50% 유사도 필터링 (사용자 선택 재료 기준) ⭐️
     const matchRate = totalCount > 0 ? Math.round((matched.length / totalCount) * 100) : 0;
     if (matched.length < minRequiredCount || matchRate < minMatchRate) {
       continue;
