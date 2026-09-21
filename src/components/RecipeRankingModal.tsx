@@ -157,6 +157,16 @@ export const RecipeRankingModal: React.FC<RecipeRankingModalProps> = ({
                       {rankIcon}
                     </div>
 
+                    {/* Dish Thumbnail */}
+                    {recipe.imageUrl && (
+                      <img
+                        src={recipe.imageUrl}
+                        alt={recipe.dishName}
+                        referrerPolicy="no-referrer"
+                        className="w-12 h-12 rounded-xl object-cover shrink-0 border border-stone-200 shadow-2xs group-hover:scale-105 transition-transform hidden xs:block"
+                      />
+                    )}
+
                     {/* Recipe Information */}
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">

@@ -197,6 +197,7 @@ export default function App() {
             ...prev,
             ...parsedList.map((r) => r.dishName),
           ]);
+          fetchDishImagesForRecipes(parsedList);
         }
       }
 
@@ -228,6 +229,7 @@ export default function App() {
             ...prev,
             ...parsedList.map((r) => r.dishName),
           ]);
+          fetchDishImagesForRecipes(parsedList);
         }
       } catch (fallbackErr: unknown) {
         setErrorMessage((err as Error)?.message || '레시피를 생성하지 못했습니다. 잠시 후 다시 시도해주세요.');
@@ -235,6 +237,43 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleUpdateRecipeImage = (
+    recipeId: string,
+    imageUrl: string,
+    source: 'ai_generated' | 'fallback_preset'
+  ) => {
+    setCurrentRecipes((prev) =>
+      prev.map((r) => (r.id === recipeId ? { ...r, imageUrl, imageSource: source } : r))
+    );
+    setSavedRecipes((prev) =>
+      prev.map((r) => (r.id === recipeId ? { ...r, imageUrl, imageSource: source } : r))
+    );
+  };
+
+  const fetchDishImagesForRecipes = (recipes: ParsedRecipe[]) => {
+    recipes.forEach(async (recipe) => {
+      try {
+        const res = await fetch('/api/recipe/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dishName: recipe.dishName,
+            ingredients: recipe.usedIngredients || recipe.ingredients || [],
+            styleTag: recipe.styleTag,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.imageUrl) {
+            handleUpdateRecipeImage(recipe.id, data.imageUrl, data.source);
+          }
+        }
+      } catch (e) {
+        console.warn('Dish image auto-fetch error:', e);
+      }
+    });
   };
 
   const handleToggleLike = async (recipe: ParsedRecipe) => {
@@ -562,6 +601,7 @@ export default function App() {
                       likesCount={activeRecipe.likesCount ?? 0}
                       onToggleLike={handleToggleLike}
                       onOpenRanking={() => setIsRankingModalOpen(true)}
+                      onUpdateRecipeImage={handleUpdateRecipeImage}
                     />
                   );
                 })()
@@ -588,6 +628,7 @@ export default function App() {
                           likesCount={rec.likesCount ?? 0}
                           onToggleLike={handleToggleLike}
                           onOpenRanking={() => setIsRankingModalOpen(true)}
+                          onUpdateRecipeImage={handleUpdateRecipeImage}
                         />
                       </div>
                     );

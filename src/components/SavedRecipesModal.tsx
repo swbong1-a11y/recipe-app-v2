@@ -64,8 +64,16 @@ export const SavedRecipesModal: React.FC<SavedRecipesModalProps> = ({
                 id={`saved-item-${r.id}`}
                 className="group p-4 rounded-xl border border-stone-200 hover:border-amber-300 hover:bg-amber-50/30 transition-all flex items-center justify-between gap-3"
               >
+                {r.imageUrl && (
+                  <img
+                    src={r.imageUrl}
+                    alt={r.dishName}
+                    referrerPolicy="no-referrer"
+                    className="w-16 h-16 rounded-xl object-cover shrink-0 border border-stone-200 shadow-2xs group-hover:scale-105 transition-transform"
+                  />
+                )}
                 <div
-                  className="flex-1 cursor-pointer"
+                  className="flex-1 cursor-pointer min-w-0"
                   onClick={() => {
                     onSelectRecipe(r);
                     onClose();
