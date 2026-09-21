@@ -15,23 +15,8 @@ const STORAGE_KEY_LAST_SEASONINGS = 'fridge_chef_last_seasonings';
 const STORAGE_KEY_LIKED_RECIPES = 'fridge_chef_liked_recipe_ids';
 
 export default function App() {
-  const [selectedIngredients, setSelectedIngredients] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_LAST_INGREDIENTS);
-      return saved ? JSON.parse(saved) : ['신김치', '스팸/런천미트', '계란', '찬밥/즉석밥'];
-    } catch {
-      return ['신김치', '스팸/런천미트', '계란', '찬밥/즉석밥'];
-    }
-  });
-
-  const [selectedSeasonings, setSelectedSeasonings] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_LAST_SEASONINGS);
-      return saved ? JSON.parse(saved) : ['참치액', '굴소스'];
-    } catch {
-      return ['참치액', '굴소스'];
-    }
-  });
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
+  const [selectedSeasonings, setSelectedSeasonings] = useState<string[]>([]);
 
   const [preference, setPreference] = useState('');
   const [cookingTool, setCookingTool] = useState('');
@@ -101,23 +86,15 @@ export default function App() {
     }
   }, [likedRecipeIds]);
 
-  // Persist last ingredients
+  // Clean up legacy ingredient/seasoning defaults so initial state remains completely unselected
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_LAST_INGREDIENTS, JSON.stringify(selectedIngredients));
+      localStorage.removeItem(STORAGE_KEY_LAST_INGREDIENTS);
+      localStorage.removeItem(STORAGE_KEY_LAST_SEASONINGS);
     } catch {
       // ignore
     }
-  }, [selectedIngredients]);
-
-  // Persist last seasonings
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_LAST_SEASONINGS, JSON.stringify(selectedSeasonings));
-    } catch {
-      // ignore
-    }
-  }, [selectedSeasonings]);
+  }, []);
 
   // Persist saved recipes
   useEffect(() => {

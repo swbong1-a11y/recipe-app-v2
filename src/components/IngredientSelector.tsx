@@ -276,31 +276,43 @@ export const IngredientSelector: React.FC<IngredientSelectorProps> = ({
         </div>
 
         {/* Selected Seasonings summary badge bar */}
-        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold text-stone-500 mr-1">
-            내 주방 치트키 ({selectedSeasonings.length}개):
-          </span>
-          {selectedSeasonings.length === 0 ? (
-            <span className="text-xs text-stone-400">
-              선택 시 셰프가 내 조미료를 최우선 치트키로 적용합니다.
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-bold text-stone-500 mr-1">
+              내 주방 치트키 ({selectedSeasonings.length}개):
             </span>
-          ) : (
-            selectedSeasonings.map((s) => (
-              <span
-                key={s}
-                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-amber-500 text-white shadow-2xs"
-              >
-                <Check className="w-3 h-3" />
-                {s}
-                <button
-                  type="button"
-                  onClick={() => toggleSeasoning(s)}
-                  className="hover:text-amber-200"
-                >
-                  <X className="w-3 h-3" />
-                </button>
+            {selectedSeasonings.length === 0 ? (
+              <span className="text-xs text-stone-400">
+                선택 시 셰프가 내 조미료를 최우선 치트키로 적용합니다.
               </span>
-            ))
+            ) : (
+              selectedSeasonings.map((s) => (
+                <span
+                  key={s}
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-amber-500 text-white shadow-2xs"
+                >
+                  <Check className="w-3 h-3" />
+                  {s}
+                  <button
+                    type="button"
+                    onClick={() => toggleSeasoning(s)}
+                    className="hover:text-amber-200"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))
+            )}
+          </div>
+          {selectedSeasonings.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onChangeSeasonings([])}
+              className="text-xs text-stone-400 hover:text-rose-600 flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              전체 비우기
+            </button>
           )}
         </div>
 
