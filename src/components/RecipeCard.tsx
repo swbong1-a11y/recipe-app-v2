@@ -21,6 +21,9 @@ import {
   Lightbulb,
   Heart,
   Award,
+  Landmark,
+  ShieldCheck,
+  Activity,
 } from 'lucide-react';
 
 interface RecipeCardProps {
@@ -83,13 +86,27 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
       className="bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md"
     >
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border-b border-amber-100 p-5 md:p-6">
+      <div className={`border-b p-5 md:p-6 transition-colors ${
+        recipe.sourceType === 'mfds_public'
+          ? 'bg-gradient-to-r from-blue-600/10 via-sky-500/5 to-indigo-600/10 border-blue-100'
+          : 'bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border-amber-100'
+      }`}>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-2 flex-wrap">
-            {recipe.styleTag && (
+            {recipe.sourceType === 'mfds_public' ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white shadow-2xs">
+                <Landmark className="w-3.5 h-3.5" />
+                <span>식약처 공공 검증 (1순위)</span>
+              </span>
+            ) : recipe.styleTag ? (
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-2xs">
                 <ChefHat className="w-3.5 h-3.5" />
-                {recipe.styleTag}
+                <span>{recipe.styleTag}</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-2xs">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>AI 15분 냉파 레시피</span>
               </span>
             )}
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-700 border border-stone-200">
@@ -214,7 +231,11 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
         {/* Used Ingredients tag list */}
         {(recipe.usedIngredients && recipe.usedIngredients.length > 0) ? (
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-stone-600">
-            <span className="font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded">
+            <span className={`font-bold px-2 py-0.5 rounded ${
+              recipe.sourceType === 'mfds_public'
+                ? 'bg-blue-100 text-blue-900'
+                : 'bg-amber-100/80 text-amber-900'
+            }`}>
               🍳 이 요리에 활용한 재료:
             </span>
             {recipe.usedIngredients.map((ing, i) => (
@@ -242,6 +263,106 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
       </div>
 
       <div className="p-5 md:p-6 space-y-6">
+        {/* 🏛️ 식품의약품안전처 공공데이터 검증 정보 & 영양 성분 카드 (공공 레시피인 경우) */}
+        {recipe.publicMeta && (
+          <div
+            id={`mfds-public-meta-card-${recipe.id}`}
+            className="rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/70 via-indigo-50/20 to-white p-4 md:p-5 space-y-4 shadow-2xs"
+          >
+            {/* Header info */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-blue-100">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-2xs">
+                  <Landmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm md:text-base font-bold text-stone-900 tracking-tight">
+                      식품의약품안전처 공공 조리식품 검증 레시피
+                    </h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                      1순위 공식 데이터
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-500 mt-0.5">
+                    공공데이터포털(식품안전나라) 표준 레시피 DB 연동
+                    {recipe.publicMeta.dishCategory && ` · 분류: ${recipe.publicMeta.dishCategory}`}
+                    {recipe.publicMeta.cookingMethod && ` · 조리법: ${recipe.publicMeta.cookingMethod}`}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Official Photo if present */}
+            {recipe.publicMeta.mainImage && (
+              <div className="relative rounded-xl overflow-hidden border border-blue-200/60 bg-stone-900 aspect-[16/9] max-h-64 sm:max-h-80 shadow-2xs">
+                <img
+                  src={recipe.publicMeta.mainImage}
+                  alt={recipe.dishName}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-black/65 backdrop-blur-sm text-[11px] font-semibold text-white/95 flex items-center gap-1.5 shadow-sm">
+                  <Landmark className="w-3.5 h-3.5 text-sky-400" />
+                  <span>식약처 공식 완성 사진</span>
+                </div>
+              </div>
+            )}
+
+            {/* Nutrition facts grid */}
+            {recipe.publicMeta.nutrition && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-950">
+                  <Activity className="w-3.5 h-3.5 text-blue-600" />
+                  <span>식약처 공인 1회 제공량 영양 성분</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs">
+                    <span className="text-[10px] font-semibold text-stone-500 block">열량 (칼로리)</span>
+                    <span className="text-xs sm:text-sm font-bold text-blue-700">
+                      {recipe.publicMeta.nutrition.calorie || '-'}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs">
+                    <span className="text-[10px] font-semibold text-stone-500 block">탄수화물</span>
+                    <span className="text-xs sm:text-sm font-bold text-stone-800">
+                      {recipe.publicMeta.nutrition.carbohydrate || '-'}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs">
+                    <span className="text-[10px] font-semibold text-stone-500 block">단백질</span>
+                    <span className="text-xs sm:text-sm font-bold text-emerald-700">
+                      {recipe.publicMeta.nutrition.protein || '-'}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs">
+                    <span className="text-[10px] font-semibold text-stone-500 block">지방</span>
+                    <span className="text-xs sm:text-sm font-bold text-stone-800">
+                      {recipe.publicMeta.nutrition.fat || '-'}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs col-span-2 sm:col-span-1">
+                    <span className="text-[10px] font-semibold text-stone-500 block">나트륨</span>
+                    <span className="text-xs sm:text-sm font-bold text-amber-700">
+                      {recipe.publicMeta.nutrition.sodium || '-'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Low Sodium Tip if provided */}
+            {recipe.publicMeta.lowSodiumTip && (
+              <div className="p-3.5 rounded-xl bg-white border border-blue-200/80 flex items-start gap-2.5 shadow-2xs">
+                <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-stone-800 leading-relaxed">
+                  <span className="font-bold text-blue-900 block mb-0.5">💡 식약처 저염 조리 노하우</span>
+                  <span className="whitespace-pre-line">{recipe.publicMeta.lowSodiumTip}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         {/* 👥 1인분, 2인분, 3인분 인분별 재료 & 물의 용량 가이드 */}
         <div
           id={`serving-capacity-guide-${recipe.id}`}
@@ -446,7 +567,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
               </span>
               <div>
                 <h3 className="text-base font-bold text-stone-900 tracking-tight">
-                  🍳 상세 3단계 조리 과정
+                  🍳 상세 {recipe.steps.length > 0 ? `${recipe.steps.length}단계 ` : ''}조리 과정
                 </h3>
                 <p className="text-xs text-stone-500">
                   불 조절, 볶는 시간, 타이밍까지 실패 없이 따라 할 수 있는 상세 가이드입니다.

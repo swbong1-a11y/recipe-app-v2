@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChefHat, Timer, Bookmark, Sparkles, RotateCcw, AlertCircle, ArrowLeft, Layers, Check, Trophy } from 'lucide-react';
+import { ChefHat, Timer, Bookmark, Sparkles, RotateCcw, AlertCircle, ArrowLeft, Layers, Check, Trophy, Landmark } from 'lucide-react';
 import { IngredientSelector } from './components/IngredientSelector';
 import { RecipeCard } from './components/RecipeCard';
 import { KitchenTimer } from './components/KitchenTimer';
@@ -21,6 +21,7 @@ export default function App() {
   const [preference, setPreference] = useState('');
   const [cookingTool, setCookingTool] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [searchStage, setSearchStage] = useState<'idle' | 'searching_public' | 'generating_ai'>('idle');
   const [currentRecipes, setCurrentRecipes] = useState<ParsedRecipe[]>([]);
   const [activeRecipeIndex, setActiveRecipeIndex] = useState<number>(0);
   const [viewMode, setViewMode] = useState<'tabs' | 'all'>('tabs');
@@ -110,12 +111,98 @@ export default function App() {
 
     setIsLoading(true);
     setErrorMessage(null);
+    setSearchStage('searching_public');
 
     // Accumulate dishes to avoid repetition
     const excludeList = isReroll
       ? Array.from(new Set([...previousDishNames, ...currentRecipes.map((r) => r.dishName)]))
       : [];
 
+    let publicFoundRecipes: ParsedRecipe[] = [];
+
+    // 1단계: 식약처 공공데이터포털 조리식품 레시피 API 우선 검색 (1순위)
+    try {
+      const publicRes = await fetch('/api/recipe/public-search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ingredients: selectedIngredients,
+          preference,
+          cookingTool,
+          excludeDishes: excludeList,
+        }),
+      });
+
+      if (publicRes.ok) {
+        const publicData = await publicRes.json();
+        if (publicData.found && Array.isArray(publicData.recipes) && publicData.recipes.length > 0) {
+          publicFoundRecipes = publicData.recipes;
+        }
+      }
+    } catch (publicErr) {
+      console.warn('식약처 공공데이터 조회 실패(AI 대체 진행):', publicErr);
+    }
+
+    // [경우 A] 공공 데이터에서 일치하는 레시피를 찾은 경우 (1순위 배치)
+    if (publicFoundRecipes.length > 0) {
+      // 1순위 공공 레시피 즉시 등록
+      setCurrentRecipes(publicFoundRecipes);
+      setActiveRecipeIndex(0);
+      setPreviousDishNames((prev) => [
+        ...prev,
+        ...publicFoundRecipes.map((r) => r.dishName),
+      ]);
+
+      // 2순위로 Gemini AI 15분 스피드 냉파 요리 함께 준비
+      setSearchStage('generating_ai');
+      try {
+        const combinedExclude = [...excludeList, ...publicFoundRecipes.map((r) => r.dishName)];
+        const aiResponse = await fetch('/api/recipe/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ingredients: selectedIngredients,
+            seasonings: selectedSeasonings,
+            preference,
+            cookingTool,
+            excludeDishes: combinedExclude,
+          }),
+        });
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          if (aiData.recipeText) {
+            const aiParsedList = parseMultipleRecipesMarkdown(aiData.recipeText, selectedIngredients);
+            if (aiParsedList.length > 0) {
+              const taggedAiList = aiParsedList.map((r, i) => ({
+                ...r,
+                sourceType: 'gemini_ai' as const,
+                styleTag: r.styleTag || (i === 0 ? '🤖 AI 15분 냉파 요리 (2순위)' : '⚡ AI 스피드 냉파'),
+              }));
+              setCurrentRecipes([...publicFoundRecipes, ...taggedAiList]);
+              setPreviousDishNames((prev) => [
+                ...prev,
+                ...taggedAiList.map((r) => r.dishName),
+              ]);
+            }
+          }
+        }
+      } catch (aiErr) {
+        console.warn('AI 보조 레시피 생성 건너뜀:', aiErr);
+      } finally {
+        setIsLoading(false);
+        setSearchStage('idle');
+      }
+
+      setTimeout(() => {
+        recipeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+      return;
+    }
+
+    // [경우 B] 공공 데이터에 일치하는 결과가 없는 경우:
+    // 기존처럼 Gemini AI가 15분 냉파 레시피를 즉석에서 생성
+    setSearchStage('generating_ai');
     try {
       const response = await fetch('/api/recipe/stream', {
         method: 'POST',
@@ -174,11 +261,15 @@ export default function App() {
                 if (streamPayload.done) {
                   const parsedList = parseMultipleRecipesMarkdown(accumulated, selectedIngredients);
                   if (parsedList.length > 0) {
-                    setCurrentRecipes(parsedList);
+                    const taggedList = parsedList.map((r) => ({
+                      ...r,
+                      sourceType: 'gemini_ai' as const,
+                    }));
+                    setCurrentRecipes(taggedList);
                     setActiveRecipeIndex(0);
                     setPreviousDishNames((prev) => [
                       ...prev,
-                      ...parsedList.map((r) => r.dishName),
+                      ...taggedList.map((r) => r.dishName),
                     ]);
                   }
                 }
@@ -191,11 +282,15 @@ export default function App() {
       if (accumulated) {
         const parsedList = parseMultipleRecipesMarkdown(accumulated, selectedIngredients);
         if (parsedList.length > 0) {
-          setCurrentRecipes(parsedList);
+          const taggedList = parsedList.map((r) => ({
+            ...r,
+            sourceType: 'gemini_ai' as const,
+          }));
+          setCurrentRecipes(taggedList);
           setActiveRecipeIndex(0);
           setPreviousDishNames((prev) => [
             ...prev,
-            ...parsedList.map((r) => r.dishName),
+            ...taggedList.map((r) => r.dishName),
           ]);
         }
       }
@@ -222,11 +317,15 @@ export default function App() {
         const data = await fallbackRes.json();
         if (data.recipeText) {
           const parsedList = parseMultipleRecipesMarkdown(data.recipeText, selectedIngredients);
-          setCurrentRecipes(parsedList);
+          const taggedList = parsedList.map((r) => ({
+            ...r,
+            sourceType: 'gemini_ai' as const,
+          }));
+          setCurrentRecipes(taggedList);
           setActiveRecipeIndex(0);
           setPreviousDishNames((prev) => [
             ...prev,
-            ...parsedList.map((r) => r.dishName),
+            ...taggedList.map((r) => r.dishName),
           ]);
         }
       } catch (fallbackErr: unknown) {
@@ -234,6 +333,7 @@ export default function App() {
       }
     } finally {
       setIsLoading(false);
+      setSearchStage('idle');
     }
   };
 
@@ -455,27 +555,72 @@ export default function App() {
         <div ref={recipeSectionRef} id="recipe-display-container">
           {isLoading && (
             <div className="bg-white rounded-2xl border border-stone-200 p-6 md:p-8 text-center space-y-4 shadow-sm animate-pulse">
-              <div className="inline-flex p-3 rounded-full bg-amber-100 text-amber-700 mb-1">
-                <ChefHat className="w-8 h-8 animate-bounce" />
+              <div className="inline-flex p-3 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 text-white mb-1 shadow-xs">
+                {searchStage === 'searching_public' ? (
+                  <Landmark className="w-8 h-8 animate-bounce" />
+                ) : (
+                  <ChefHat className="w-8 h-8 animate-bounce" />
+                )}
               </div>
               <h3 className="text-lg font-bold text-stone-800">
-                자투리 미식회 셰프가 최소 2가지 황금 레시피를 조합하는 중...
+                {searchStage === 'searching_public'
+                  ? '🏛️ 식약처 조리식품 공공 DB에서 1순위 공식 레시피 검색 중...'
+                  : '🤖 Gemini AI가 15분 초간단 냉파 레시피를 설계하는 중...'}
               </h3>
               <p className="text-xs text-stone-500 max-w-md mx-auto leading-relaxed">
-                선택한 재료 중 최적의 궁합을 골라 서로 다른 매력의 2가지 15분 요리와 필수 시판 치트키를 설계하고 있습니다.
+                {searchStage === 'searching_public'
+                  ? '선택하신 식재료가 포함된 식품의약품안전처 조리식품 오픈 API(식품안전나라) 표준 레시피를 1순위로 탐색하고 있습니다.'
+                  : '냉장고 자투리 재료를 가장 맛있게 살리는 15분 스피드 조리법과 맛 상승 치트키를 조합 중입니다.'}
               </p>
 
               {/* Gentle loading indicator */}
               <div className="flex items-center justify-center gap-1.5 pt-2">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse delay-75" />
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-bounce delay-150" />
+                <span className={`w-2 h-2 rounded-full animate-ping ${searchStage === 'searching_public' ? 'bg-blue-600' : 'bg-amber-500'}`} />
+                <span className={`w-2 h-2 rounded-full animate-pulse delay-75 ${searchStage === 'searching_public' ? 'bg-blue-600' : 'bg-amber-500'}`} />
+                <span className={`w-2 h-2 rounded-full animate-bounce delay-150 ${searchStage === 'searching_public' ? 'bg-blue-600' : 'bg-amber-500'}`} />
               </div>
             </div>
           )}
 
           {!isLoading && currentRecipes.length > 0 && (
             <div className="space-y-4 animate-in fade-in duration-300">
+              {/* Hybrid Search Notice Banner */}
+              {currentRecipes.some((r) => r.sourceType === 'mfds_public') ? (
+                <div
+                  id="hybrid-search-banner"
+                  className="flex items-start sm:items-center gap-3 p-3.5 sm:px-4 sm:py-3 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white border border-blue-200/80 text-xs shadow-2xs"
+                >
+                  <div className="p-1.5 rounded-lg bg-blue-600 text-white shrink-0 shadow-2xs mt-0.5 sm:mt-0">
+                    <Landmark className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 text-stone-700 leading-relaxed">
+                    <span className="font-bold text-blue-900 block sm:inline mr-1">
+                      🏛️ 식약처 조리식품 공공 DB 1순위 매칭 완료:
+                    </span>
+                    <span>
+                      선택하신 식재료가 포함된 식품의약품안전처 공식 표준 레시피를 1순위로 우선 배치했습니다.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  id="hybrid-search-banner"
+                  className="flex items-start sm:items-center gap-3 p-3.5 sm:px-4 sm:py-3 rounded-2xl bg-gradient-to-r from-amber-50/90 via-orange-50/30 to-white border border-amber-200/80 text-xs shadow-2xs"
+                >
+                  <div className="p-1.5 rounded-lg bg-amber-500 text-white shrink-0 shadow-2xs mt-0.5 sm:mt-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 text-stone-700 leading-relaxed">
+                    <span className="font-bold text-amber-900 block sm:inline mr-1">
+                      🤖 하이브리드 AI 즉석 냉파 모드:
+                    </span>
+                    <span>
+                      식약처 공공 DB에 일치하는 결과가 없어, Gemini AI가 자투리 재료를 100% 활용하는 15분 스피드 레시피를 생성했습니다.
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Action Toolbar */}
               <div className="flex flex-wrap items-center justify-between gap-2.5">
                 <button
@@ -516,9 +661,10 @@ export default function App() {
 
               {/* Multi-Recipe Switcher Tabs (when 2 or more recipes exist and viewMode is tabs) */}
               {currentRecipes.length > 1 && viewMode === 'tabs' && (
-                <div className="flex items-center gap-2 bg-stone-200/70 p-1 rounded-2xl">
+                <div className="flex items-center gap-2 bg-stone-200/70 p-1.5 rounded-2xl">
                   {currentRecipes.map((rec, idx) => {
                     const isActive = idx === activeRecipeIndex;
+                    const isMfds = rec.sourceType === 'mfds_public';
                     return (
                       <button
                         key={rec.id || idx}
@@ -530,15 +676,28 @@ export default function App() {
                             : 'text-stone-600 hover:text-stone-900 hover:bg-white/50'
                         }`}
                       >
-                        <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] flex items-center justify-center shrink-0">
+                        <span
+                          className={`w-5 h-5 rounded-full text-white text-[11px] flex items-center justify-center shrink-0 font-bold ${
+                            isMfds ? 'bg-blue-600' : 'bg-amber-500'
+                          }`}
+                        >
                           {idx + 1}
                         </span>
-                        <span className="truncate max-w-[160px] sm:max-w-[220px]">
+                        <span className="truncate max-w-[130px] sm:max-w-[200px]">
                           {rec.dishName}
                         </span>
-                        {rec.styleTag && (
-                          <span className="hidden md:inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-medium shrink-0">
+                        {isMfds ? (
+                          <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold shrink-0">
+                            <Landmark className="w-3 h-3 text-blue-700" />
+                            <span>1순위 공공</span>
+                          </span>
+                        ) : rec.styleTag ? (
+                          <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-medium shrink-0">
                             {rec.styleTag}
+                          </span>
+                        ) : (
+                          <span className="hidden sm:inline-block text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-medium shrink-0">
+                            AI 냉파
                           </span>
                         )}
                       </button>

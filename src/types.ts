@@ -20,6 +20,23 @@ export interface ServingsBreakdown {
   four: ServingInfo;
 }
 
+export interface PublicRecipeNutrition {
+  calorie?: string; // 열량 (kcal)
+  carbohydrate?: string; // 탄수화물 (g)
+  protein?: string; // 단백질 (g)
+  fat?: string; // 지방 (g)
+  sodium?: string; // 나트륨 (mg)
+}
+
+export interface PublicRecipeMeta {
+  rcpSeq?: string;
+  cookingMethod?: string; // RCP_WAY2 (끓이기, 볶기, 찌기 등)
+  dishCategory?: string; // RCP_PAT2 (국&찌개, 반찬, 일품 등)
+  lowSodiumTip?: string; // RCP_NA_TIP (식약처 저염 조리 비법)
+  mainImage?: string; // ATT_FILE_NO_MK (공식 조리 완성 이미지)
+  nutrition?: PublicRecipeNutrition;
+}
+
 export interface ParsedRecipe {
   id: string;
   dishName: string;
@@ -28,6 +45,8 @@ export interface ParsedRecipe {
   likesCount: number;
   isLiked?: boolean;
   styleTag?: string;
+  sourceType?: 'mfds_public' | 'gemini_ai'; // 🏛️ 식약처 공공데이터 레시피 vs 🤖 Gemini AI 냉파 레시피
+  publicMeta?: PublicRecipeMeta;
   usedIngredients?: string[];
   servings?: ServingsBreakdown;
   steps: string[];
