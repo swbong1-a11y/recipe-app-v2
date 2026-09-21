@@ -24,6 +24,7 @@ import {
   Landmark,
   ShieldCheck,
   Activity,
+  BookOpen,
 } from 'lucide-react';
 
 interface RecipeCardProps {
@@ -89,15 +90,38 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
       <div className={`border-b p-5 md:p-6 transition-colors ${
         recipe.sourceType === 'mfds_public'
           ? 'bg-gradient-to-r from-blue-600/10 via-sky-500/5 to-indigo-600/10 border-blue-100'
+          : recipe.sourceType === 'korean_food_archive'
+          ? 'bg-gradient-to-r from-emerald-600/10 via-teal-500/5 to-amber-600/10 border-emerald-100'
           : 'bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border-amber-100'
       }`}>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
           <div className="flex items-center gap-2 flex-wrap">
             {recipe.sourceType === 'mfds_public' ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white shadow-2xs">
-                <Landmark className="w-3.5 h-3.5" />
-                <span>식약처 공공 검증 (1순위)</span>
-              </span>
+              <>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-600 text-white shadow-2xs">
+                  <Landmark className="w-3.5 h-3.5" />
+                  <span>🏛️ 식약처 공식 인증 (1순위)</span>
+                </span>
+                {typeof recipe.matchRate === 'number' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    <span>재료 일치율 {recipe.matchRate}%</span>
+                  </span>
+                )}
+              </>
+            ) : recipe.sourceType === 'korean_food_archive' ? (
+              <>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-700 text-white shadow-2xs">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>🇰🇷 한식진흥원 전통 레시피 (1순위)</span>
+                </span>
+                {typeof recipe.matchRate === 'number' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>재료 일치율 {recipe.matchRate}%</span>
+                  </span>
+                )}
+              </>
             ) : recipe.styleTag ? (
               <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-2xs">
                 <ChefHat className="w-3.5 h-3.5" />
@@ -234,6 +258,8 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
             <span className={`font-bold px-2 py-0.5 rounded ${
               recipe.sourceType === 'mfds_public'
                 ? 'bg-blue-100 text-blue-900'
+                : recipe.sourceType === 'korean_food_archive'
+                ? 'bg-emerald-100 text-emerald-900'
                 : 'bg-amber-100/80 text-amber-900'
             }`}>
               🍳 이 요리에 활용한 재료:
@@ -263,34 +289,95 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
       </div>
 
       <div className="p-5 md:p-6 space-y-6">
-        {/* 🏛️ 식품의약품안전처 공공데이터 검증 정보 & 영양 성분 카드 (공공 레시피인 경우) */}
+        {/* 🏛️ 공공데이터 검증 정보 & 영양 성분 카드 (식약처 / 한식진흥원 구분) */}
         {recipe.publicMeta && (
           <div
-            id={`mfds-public-meta-card-${recipe.id}`}
-            className="rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/70 via-indigo-50/20 to-white p-4 md:p-5 space-y-4 shadow-2xs"
+            id={`public-meta-card-${recipe.id}`}
+            className={`rounded-2xl border p-4 md:p-5 space-y-4 shadow-2xs ${
+              recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                ? 'border-emerald-200/80 bg-gradient-to-br from-emerald-50/70 via-teal-50/20 to-white'
+                : 'border-blue-200/80 bg-gradient-to-br from-blue-50/70 via-indigo-50/20 to-white'
+            }`}
           >
             {/* Header info */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-blue-100">
+            <div className={`flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b ${
+              recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                ? 'border-emerald-100'
+                : 'border-blue-100'
+            }`}>
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-blue-600 text-white shadow-2xs">
-                  <Landmark className="w-4 h-4" />
+                <div className={`p-1.5 rounded-lg text-white shadow-2xs ${
+                  recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                    ? 'bg-emerald-700'
+                    : 'bg-blue-600'
+                }`}>
+                  {recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food' ? (
+                    <BookOpen className="w-4 h-4" />
+                  ) : (
+                    <Landmark className="w-4 h-4" />
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm md:text-base font-bold text-stone-900 tracking-tight">
-                      식품의약품안전처 공공 조리식품 검증 레시피
+                      {recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                        ? '한식진흥원 전통 아카이브 공공 레시피'
+                        : '식품의약품안전처 공공 조리식품 검증 레시피'}
                     </h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                      1순위 공식 데이터
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                        : 'bg-blue-100 text-blue-800 border-blue-200'
+                    }`}>
+                      {recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                        ? '1순위 전통 데이터'
+                        : '1순위 공식 데이터'}
                     </span>
                   </div>
                   <p className="text-xs text-stone-500 mt-0.5">
-                    공공데이터포털(식품안전나라) 표준 레시피 DB 연동
-                    {recipe.publicMeta.dishCategory && ` · 분류: ${recipe.publicMeta.dishCategory}`}
+                    {recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                      ? `한식포털(한식진흥원) 아카이브 DB 연동 · 분류: ${recipe.publicMeta.archiveCategory || recipe.publicMeta.dishCategory || '전통 한식'}`
+                      : '공공데이터포털(식품안전나라) 표준 레시피 DB 연동'}
+                    {recipe.publicMeta.dishCategory && !recipe.publicMeta.archiveCategory && ` · 분류: ${recipe.publicMeta.dishCategory}`}
                     {recipe.publicMeta.cookingMethod && ` · 조리법: ${recipe.publicMeta.cookingMethod}`}
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* 🎯 70% 이상 재료 일치 검증 표시 바 */}
+            <div className={`p-3 rounded-xl bg-white border flex flex-wrap items-center justify-between gap-2 shadow-2xs ${
+              recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                ? 'border-emerald-200'
+                : 'border-blue-200'
+            }`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-md border ${
+                  recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                    ? 'text-emerald-900 bg-emerald-50 border-emerald-200'
+                    : 'text-blue-900 bg-blue-50 border-blue-200'
+                }`}>
+                  <Sparkles className={`w-3.5 h-3.5 ${
+                    recipe.sourceType === 'korean_food_archive' || recipe.publicMeta.sourceOrg === 'korean_food'
+                      ? 'text-emerald-600'
+                      : 'text-blue-600'
+                  }`} />
+                  <span>재료 일치율 {recipe.matchRate ?? 100}%</span>
+                </span>
+                <span className="text-xs text-stone-700">
+                  선택한 재료 <strong className={recipe.sourceType === 'korean_food_archive' ? 'text-emerald-700' : 'text-blue-700'}>
+                    {recipe.publicMeta.totalSelectedCount || recipe.ingredients?.length || 1}개
+                  </strong> 중 <strong className="text-emerald-700">{recipe.publicMeta.matchedIngredients?.length || recipe.usedIngredients?.length || 1}개</strong> 포함
+                </span>
+                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  ✓ 최소 70% 이상 유사 기준 충족
+                </span>
+              </div>
+              {recipe.publicMeta.missingIngredients && recipe.publicMeta.missingIngredients.length > 0 && (
+                <div className="text-[11px] text-stone-500">
+                  미포함 재료: <span className="text-stone-600">{recipe.publicMeta.missingIngredients.join(', ')}</span>
+                </div>
+              )}
             </div>
 
             {/* Official Photo if present */}
@@ -303,8 +390,17 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute bottom-2.5 left-2.5 px-2.5 py-1 rounded-lg bg-black/65 backdrop-blur-sm text-[11px] font-semibold text-white/95 flex items-center gap-1.5 shadow-sm">
-                  <Landmark className="w-3.5 h-3.5 text-sky-400" />
-                  <span>식약처 공식 완성 사진</span>
+                  {recipe.sourceType === 'korean_food_archive' ? (
+                    <>
+                      <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>한식진흥원 공식 완성 사진</span>
+                    </>
+                  ) : (
+                    <>
+                      <Landmark className="w-3.5 h-3.5 text-sky-400" />
+                      <span>식약처 공식 완성 사진</span>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -312,36 +408,46 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
             {/* Nutrition facts grid */}
             {recipe.publicMeta.nutrition && (
               <div className="space-y-1.5">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-950">
-                  <Activity className="w-3.5 h-3.5 text-blue-600" />
-                  <span>식약처 공인 1회 제공량 영양 성분</span>
+                <div className={`flex items-center gap-1.5 text-xs font-bold ${
+                  recipe.sourceType === 'korean_food_archive' ? 'text-emerald-950' : 'text-blue-950'
+                }`}>
+                  <Activity className={`w-3.5 h-3.5 ${
+                    recipe.sourceType === 'korean_food_archive' ? 'text-emerald-600' : 'text-blue-600'
+                  }`} />
+                  <span>
+                    {recipe.sourceType === 'korean_food_archive'
+                      ? '한식진흥원 1회 제공량 영양 정보'
+                      : '식약처 공인 1회 제공량 영양 성분'}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs">
+                  <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 text-center shadow-2xs">
                     <span className="text-[10px] font-semibold text-stone-500 block">열량 (칼로리)</span>
-                    <span className="text-xs sm:text-sm font-bold text-blue-700">
+                    <span className={`text-xs sm:text-sm font-bold ${
+                      recipe.sourceType === 'korean_food_archive' ? 'text-emerald-700' : 'text-blue-700'
+                    }`}>
                       {recipe.publicMeta.nutrition.calorie || '-'}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs">
+                  <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 text-center shadow-2xs">
                     <span className="text-[10px] font-semibold text-stone-500 block">탄수화물</span>
                     <span className="text-xs sm:text-sm font-bold text-stone-800">
                       {recipe.publicMeta.nutrition.carbohydrate || '-'}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs">
+                  <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 text-center shadow-2xs">
                     <span className="text-[10px] font-semibold text-stone-500 block">단백질</span>
                     <span className="text-xs sm:text-sm font-bold text-emerald-700">
                       {recipe.publicMeta.nutrition.protein || '-'}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs">
+                  <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 text-center shadow-2xs">
                     <span className="text-[10px] font-semibold text-stone-500 block">지방</span>
                     <span className="text-xs sm:text-sm font-bold text-stone-800">
                       {recipe.publicMeta.nutrition.fat || '-'}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-white border border-blue-200/70 text-center shadow-2xs col-span-2 sm:col-span-1">
+                  <div className="p-2.5 rounded-xl bg-white border border-stone-200/80 text-center shadow-2xs col-span-2 sm:col-span-1">
                     <span className="text-[10px] font-semibold text-stone-500 block">나트륨</span>
                     <span className="text-xs sm:text-sm font-bold text-amber-700">
                       {recipe.publicMeta.nutrition.sodium || '-'}
@@ -351,18 +457,33 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({
               </div>
             )}
 
-            {/* Low Sodium Tip if provided */}
+            {/* Low Sodium Tip or Traditional Archive Tip if provided */}
             {recipe.publicMeta.lowSodiumTip && (
-              <div className="p-3.5 rounded-xl bg-white border border-blue-200/80 flex items-start gap-2.5 shadow-2xs">
-                <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div className={`p-3.5 rounded-xl bg-white border flex items-start gap-2.5 shadow-2xs ${
+                recipe.sourceType === 'korean_food_archive'
+                  ? 'border-emerald-200/80'
+                  : 'border-blue-200/80'
+              }`}>
+                {recipe.sourceType === 'korean_food_archive' ? (
+                  <BookOpen className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                ) : (
+                  <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                )}
                 <div className="text-xs text-stone-800 leading-relaxed">
-                  <span className="font-bold text-blue-900 block mb-0.5">💡 식약처 저염 조리 노하우</span>
+                  <span className={`font-bold block mb-0.5 ${
+                    recipe.sourceType === 'korean_food_archive' ? 'text-emerald-900' : 'text-blue-900'
+                  }`}>
+                    {recipe.sourceType === 'korean_food_archive'
+                      ? '🇰🇷 한식진흥원 전통 내림 조리 비법'
+                      : '💡 식약처 저염 조리 노하우'}
+                  </span>
                   <span className="whitespace-pre-line">{recipe.publicMeta.lowSodiumTip}</span>
                 </div>
               </div>
             )}
           </div>
         )}
+
         {/* 👥 1인분, 2인분, 3인분 인분별 재료 & 물의 용량 가이드 */}
         <div
           id={`serving-capacity-guide-${recipe.id}`}

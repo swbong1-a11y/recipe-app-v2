@@ -6,20 +6,32 @@ const MFDS_API_KEY = process.env.FOOD_SAFETY_API_KEY || '6852cf1471d44168b284';
 const SYNONYM_MAP: Record<string, string[]> = {
   '계란': ['달걀'],
   '달걀': ['계란'],
-  '소고기': ['쇠고기', '한우'],
-  '쇠고기': ['소고기'],
-  '돼지고기': ['삼겹살', '목살', '돼지', '제육', '앞다리살'],
+  '소고기': ['쇠고기', '한우', '소'],
+  '쇠고기': ['소고기', '한우', '소'],
+  '돼지고기': ['삼겹살', '목살', '돼지', '제육', '앞다리살', '뒷다리살'],
   '스팸': ['햄', '통조림햄', '리챔'],
-  '참치': ['참치캔', '다랑어'],
+  '햄': ['스팸', '통조림햄', '비엔나'],
+  '참치': ['참치캔', '다랑어', '통조림참치'],
   '대파': ['쪽파', '실파', '파'],
+  '파': ['대파', '쪽파', '실파'],
   '두부': ['연두부', '순두부', '모두부'],
   '김치': ['배추김치', '신김치', '묵은지'],
   '닭가슴살': ['닭고기', '닭'],
+  '닭고기': ['닭가슴살', '닭'],
   '버섯': ['느타리버섯', '새송이버섯', '팽이버섯', '표고버섯'],
   '감자': ['햇감자'],
   '양파': ['자색양파'],
   '치즈': ['모짜렐라', '체다치즈', '피자치즈'],
   '만두': ['교자', '물만두', '군만두'],
+  '오징어': ['물오징어', '갑오징어'],
+  '어묵': ['오뎅'],
+  '소시지': ['소세지', '비엔나', '프랑크'],
+  '베이컨': ['삼겹'],
+  '애호박': ['호박'],
+  '고추': ['청양고추', '홍고추', '풋고추'],
+  '새우': ['칵테일새우', '대하'],
+  '밥': ['찬밥', '햇반', '쌀'],
+  '라면': ['라면사리', '면'],
 };
 
 export interface MfdsRawRow {
@@ -112,6 +124,7 @@ export function convertMfdsRowToRecipe(
   row: MfdsRawRow,
   userIngredients: string[],
   matchedIngs: string[],
+  matchRate: number = 100,
   index: number = 1
 ): ParsedRecipe {
   // Extract steps from MANUAL01 ~ MANUAL20
@@ -162,6 +175,7 @@ export function convertMfdsRowToRecipe(
   const secureImage = rawImage ? rawImage.replace(/^http:\/\//, 'https://') : undefined;
 
   const servings = parseMfdsServings(row.RCP_PARTS_DTLS || '', row.RCP_NM, matchedIngs);
+  const missing = userIngredients.filter((ing) => !matchedIngs.includes(ing));
 
   return {
     id: `mfds_${row.RCP_SEQ}_${Date.now()}_${index}`,
@@ -172,12 +186,17 @@ export function convertMfdsRowToRecipe(
     isLiked: false,
     styleTag: `🏛️ 식약처 공공 레시피 (1순위)`,
     sourceType: 'mfds_public',
+    matchRate,
     publicMeta: {
       rcpSeq: row.RCP_SEQ,
       cookingMethod: row.RCP_WAY2,
       dishCategory: row.RCP_PAT2,
       lowSodiumTip: row.RCP_NA_TIP,
       mainImage: secureImage,
+      matchRate,
+      matchedIngredients: matchedIngs,
+      missingIngredients: missing,
+      totalSelectedCount: userIngredients.length,
       nutrition: {
         calorie: row.INFO_ENG ? `${row.INFO_ENG} kcal` : undefined,
         carbohydrate: row.INFO_CAR ? `${row.INFO_CAR} g` : undefined,
@@ -201,6 +220,7 @@ export function convertMfdsRowToRecipe(
 
 /**
  * Searches the MFDS recipe OpenAPI with user ingredients.
+ * Recommends recipes where user-selected ingredients have at least 70% match (minMatchRate).
  * Returns sorted list of matching ParsedRecipes, with the best matching at index 0 (1순위).
  */
 export async function searchMfdsRecipes(params: {
@@ -208,34 +228,31 @@ export async function searchMfdsRecipes(params: {
   preference?: string;
   cookingTool?: string;
   excludeDishes?: string[];
+  minMatchRate?: number;
   limit?: number;
 }): Promise<ParsedRecipe[]> {
-  const { ingredients = [], preference = '', cookingTool = '', excludeDishes = [], limit = 2 } = params;
+  const {
+    ingredients = [],
+    preference = '',
+    cookingTool = '',
+    excludeDishes = [],
+    minMatchRate = 70,
+    limit = 2,
+  } = params;
 
   if (!ingredients || ingredients.length === 0) {
     return [];
   }
 
-  // Build query terms including synonyms
-  const searchTerms = new Set<string>();
-  for (const ing of ingredients) {
-    const trimmed = ing.trim();
-    if (!trimmed) continue;
-    searchTerms.add(trimmed);
-    const syns = SYNONYM_MAP[trimmed];
-    if (syns) {
-      syns.forEach((s) => searchTerms.add(s));
-    }
-  }
-
-  const queries = Array.from(searchTerms).slice(0, 4);
   const rowsMap = new Map<string, MfdsRawRow>();
 
-  // Parallel fetch for candidate ingredients
+  // Fetch candidate recipes for each user ingredient in parallel
   await Promise.all(
-    queries.map(async (term) => {
+    ingredients.slice(0, 5).map(async (ing) => {
       try {
-        const url = `http://openapi.foodsafetykorea.go.kr/api/${MFDS_API_KEY}/COOKRCP01/json/1/30/RCP_PARTS_DTLS=${encodeURIComponent(term)}`;
+        const trimmed = ing.trim();
+        if (!trimmed) return;
+        const url = `http://openapi.foodsafetykorea.go.kr/api/${MFDS_API_KEY}/COOKRCP01/json/1/40/RCP_PARTS_DTLS=${encodeURIComponent(trimmed)}`;
         const res = await fetch(url, { signal: AbortSignal.timeout(3500) });
         if (!res.ok) return;
 
@@ -247,21 +264,21 @@ export async function searchMfdsRecipes(params: {
             }
           }
         }
-      } catch (err: unknown) {
+      } catch {
         // Silently skip failed sub-request
       }
     })
   );
 
-  // If two or more ingredients, also try multi-ingredient query
+  // If two or more ingredients, also search with combined query (e.g. 김치,두부)
   if (ingredients.length >= 2) {
     try {
-      const combined = `${ingredients[0]},${ingredients[1]}`;
-      const url = `http://openapi.foodsafetykorea.go.kr/api/${MFDS_API_KEY}/COOKRCP01/json/1/20/RCP_PARTS_DTLS=${encodeURIComponent(combined)}`;
+      const combined = `${ingredients[0].trim()},${ingredients[1].trim()}`;
+      const url = `http://openapi.foodsafetykorea.go.kr/api/${MFDS_API_KEY}/COOKRCP01/json/1/30/RCP_PARTS_DTLS=${encodeURIComponent(combined)}`;
       const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
       if (res.ok) {
         const data: MfdsApiResponse = await res.json();
-        if (data.COOKRCP01?.row) {
+        if (data.COOKRCP01?.row && Array.isArray(data.COOKRCP01.row)) {
           for (const row of data.COOKRCP01.row) {
             if (row.RCP_SEQ && !rowsMap.has(row.RCP_SEQ)) {
               rowsMap.set(row.RCP_SEQ, row);
@@ -279,10 +296,15 @@ export async function searchMfdsRecipes(params: {
     return [];
   }
 
+  const totalCount = ingredients.length;
+  // Minimum number of matched ingredients required to achieve minMatchRate% (e.g. 70%)
+  const minRequiredCount = Math.ceil(totalCount * (minMatchRate / 100));
+
   // Score each candidate against user ingredients and preferences
   interface ScoredCandidate {
     row: MfdsRawRow;
     score: number;
+    matchRate: number;
     matchedIngredients: string[];
   }
 
@@ -294,74 +316,86 @@ export async function searchMfdsRecipes(params: {
     const matched: string[] = [];
 
     for (const ing of ingredients) {
-      const lower = ing.toLowerCase();
-      const syns = SYNONYM_MAP[ing] || [];
+      const lower = ing.trim().toLowerCase();
+      if (!lower) continue;
+      const syns = SYNONYM_MAP[lower] || SYNONYM_MAP[ing.trim()] || [];
       const isMatched =
         partsText.includes(lower) ||
         dishName.includes(lower) ||
-        syns.some((s) => partsText.includes(s) || dishName.includes(s));
+        syns.some((s) => partsText.includes(s.toLowerCase()) || dishName.includes(s.toLowerCase()));
 
       if (isMatched) {
-        matched.push(ing);
+        matched.push(ing.trim());
       }
     }
 
-    // Must match at least 1 user ingredient
-    if (matched.length === 0) continue;
+    // ⭐️ 최소 70% 유사도 필터링 (사용자 선택 재료 기준) ⭐️
+    const matchRate = totalCount > 0 ? Math.round((matched.length / totalCount) * 100) : 0;
+    if (matched.length < minRequiredCount || matchRate < minMatchRate) {
+      continue;
+    }
 
-    let score = matched.length * 20;
+    // 일치율이 높을수록 기본 점수 대폭 가산 (100% 일치 최우선)
+    let score = matchRate * 10 + matched.length * 20;
 
-    // Bonus if dish name prominently features an ingredient
+    // 요리명에 주요 재료가 포함된 경우 추가 가산점
     for (const ing of matched) {
       if (dishName.includes(ing.toLowerCase())) {
-        score += 8;
+        score += 15;
       }
     }
 
-    // Preference matching bonuses
+    // 선호 스타일 가산점
     if (preference) {
       if (preference.includes('국물') && (row.RCP_PAT2?.includes('국') || row.RCP_WAY2?.includes('끓이기'))) {
-        score += 6;
+        score += 10;
       }
       if (preference.includes('고단백') && (parseFloat(row.INFO_PRO || '0') >= 12 || partsText.includes('닭') || partsText.includes('고기') || partsText.includes('두부'))) {
-        score += 6;
+        score += 10;
       }
       if (preference.includes('저염') && (row.RCP_NA_TIP || parseFloat(row.INFO_NA || '999') <= 450)) {
-        score += 6;
+        score += 10;
       }
       if (preference.includes('매콤') && (partsText.includes('고추') || partsText.includes('고춧가루'))) {
+        score += 10;
+      }
+    }
+
+    // 조리 도구 가산점
+    if (cookingTool) {
+      if (cookingTool.includes('후라이팬') && (row.RCP_WAY2?.includes('볶기') || row.RCP_WAY2?.includes('부치기'))) {
+        score += 6;
+      }
+      if (cookingTool.includes('냄비') && (row.RCP_WAY2?.includes('끓이기') || row.RCP_WAY2?.includes('찌기'))) {
         score += 6;
       }
     }
 
-    // Cooking tool bonus
-    if (cookingTool) {
-      if (cookingTool.includes('후라이팬') && (row.RCP_WAY2?.includes('볶기') || row.RCP_WAY2?.includes('부치기'))) {
-        score += 4;
-      }
-      if (cookingTool.includes('냄비') && (row.RCP_WAY2?.includes('끓이기') || row.RCP_WAY2?.includes('찌기'))) {
-        score += 4;
-      }
-    }
-
-    // Exclude previously generated dishes if rerolling
+    // 재추천 시 이전 추천 메뉴 감점
     if (excludeDishes.some((d) => d && row.RCP_NM.includes(d))) {
-      score -= 100;
+      score -= 200;
     }
 
     if (score > 0) {
       scored.push({
         row,
         score,
+        matchRate,
         matchedIngredients: matched,
       });
     }
   }
 
-  // Sort descending by score
-  scored.sort((a, b) => b.score - a.score);
+  // 1차 기준: 재료 일치율(matchRate) 내림차순 (100% > 80% > 75%)
+  // 2차 기준: 종합 점수(score) 내림차순
+  scored.sort((a, b) => {
+    if (b.matchRate !== a.matchRate) {
+      return b.matchRate - a.matchRate;
+    }
+    return b.score - a.score;
+  });
 
   return scored.slice(0, limit).map((s, idx) =>
-    convertMfdsRowToRecipe(s.row, ingredients, s.matchedIngredients, idx + 1)
+    convertMfdsRowToRecipe(s.row, ingredients, s.matchedIngredients, s.matchRate, idx + 1)
   );
 }
